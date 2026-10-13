@@ -2,12 +2,16 @@
 
   <PropertyGroup>
     <PackageId>ExpressBot</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>vadarganiv</Authors>
     <Company>vadarganiv</Company>
     <PackageTags>Bot;Messenger;Express</PackageTags>
     <Description>Library for working with bots in eXpress enterprise messenger.</Description>
     <RepositoryUrl>https://github.com/vadarganiv/ExpressBot</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/vadarganiv/ExpressBot</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageReleaseNotes>Updated notification and command models, typed notification responses, and package documentation. Includes source-breaking API changes from 0.1.0; see the README migration notes.</PackageReleaseNotes>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -16,6 +20,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
+    <None Include="..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>

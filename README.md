@@ -1,90 +1,120 @@
-### ExpressBot
+# ExpressBot
 
-ExpressBot is a library designed to simplify working with bots in the [eXpress enterprise messenger](https://express.ms/). It allows you to easily host a bot on your specified endpoint and send requests to the CTS server.
+A .NET 8 library for building bots for the [eXpress enterprise messenger](https://express.ms/).
+It provides an HTTP listener for incoming bot commands, a BotX API client, and JSON models
+for messages, notifications, chats, and users.
 
-With ExpressBot, you can:
-- Create bots and manage their events.
-- Easily handle incoming commands.
-- Quickly integrate the library into your solution.
+[NuGet package](https://www.nuget.org/packages/ExpressBot) ·
+[Source code](https://github.com/vadarganiv/ExpressBot) ·
+[Issues](https://github.com/vadarganiv/ExpressBot/issues) ·
+[MIT license](https://github.com/vadarganiv/ExpressBot/blob/master/LICENSE.txt)
 
-### Notice
+## Status and requirements
 
-This library is in its alpha version, which means:
-- Some features may be missing or not working correctly.
-- Bugs might occur.
+ExpressBot is an early-stage library with an evolving API. Version 0.2.0 includes
+source-breaking changes from 0.1.0; review the migration notes below.
 
-If you find a bug or have suggestions for improvement, don’t hesitate to let us know! We will address them as time and resources allow.
+- .NET 8 or later.
+- An eXpress bot registration, bot ID, secret, and CTS server URL.
+- An HTTP listener endpoint reachable by your eXpress deployment.
+- `Microsoft.Extensions.Logging.Abstractions` 9.0.0 or later (NuGet dependency).
 
----
+File upload/download and the smartapp endpoints currently throw `NotImplementedException`.
 
-### Installation
+## Installation
 
-Add the library to your project using **NuGet**:
 ```sh
-dotnet add package ExpressBot
+dotnet add package ExpressBot --version 0.2.0
 ```
 
----
+For the console example, also install:
 
-### Example Usage
+```sh
+dotnet add package Microsoft.Extensions.Logging.Console --version 9.0.0
+```
 
-Here is an example of a simple console application demonstrating the use of ExpressBot:
+## Quick start
+
+Supply `EXPRESS_BOT_ID`, `EXPRESS_CTS_URL`, `EXPRESS_HOST_URL`, and `EXPRESS_SECRET_KEY`
+through your environment or secret manager. Use an absolute HTTP(S) listener URL
+ending in `/` for `EXPRESS_HOST_URL`. Do not put credentials in source control.
 
 ```csharp
-using System;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using ExpressBot;
+using Microsoft.Extensions.Logging;
 
-internal class Program
+static string Required(string name) =>
+    Environment.GetEnvironmentVariable(name)
+    ?? throw new InvalidOperationException($"Set the {name} environment variable.");
+
+using var loggerFactory = LoggerFactory.Create(builder =>
+    builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
+
+var bot = new ExpressBotManager(
+    Required("EXPRESS_BOT_ID"),
+    Required("EXPRESS_CTS_URL"),
+    Required("EXPRESS_HOST_URL"),
+    Required("EXPRESS_SECRET_KEY"),
+    loggerFactory);
+
+// Subscribe before starting the listener. Handle messages in your application.
+bot.MessageRecived += message =>
 {
-    private static ExpressBotManager clientBot;
-    private static ILogger logger;
+    Console.WriteLine("Bot command received.");
+};
 
-    public static async Task Main(string[] args)
-    {
-        // Set up the logger
-        using var loggerFactory = LoggerFactory.Create(builder =>
-        {
-            builder
-                .AddConsole()
-                .SetMinimumLevel(LogLevel.Information);
-        });
-
-        // Create an instance of ExpressBotManager
-        clientBot = new ExpressBotManager(
-            "your_bot_id",
-            "cts_url",
-            "host_endpoint",
-            "secret_Key",
-            loggerFactory
-        );
-
-        // Start the bot
-        await clientBot.Start();
-
-        // Subscribe to the message received event
-        clientBot.MessageRecived += ClientBot_MessageRecived;
-
-        Console.ReadLine();
-
-        // Stop the bot
-        await clientBot.Stop();
-    }
-
-    private static async void ClientBot_MessageRecived(CommandRequest message)
-    {
-        // Handle incoming message
-        // Add your logic here
-    }
-}
+await bot.Start();
+Console.WriteLine("Bot is running. Press Enter to stop.");
+Console.ReadLine();
+await bot.Stop();
 ```
 
----
+`Start()` authorizes the bot against CTS and starts the HTTP listener. Running this
+example connects to the configured server. Depending on the operating system,
+the listener endpoint may require an appropriate HTTP URL reservation or proxy configuration.
 
-### Support and Feedback
+The `MessageRecived` spelling is part of the current API.
 
-If you have any questions, encounter a bug, or have suggestions for improvements, please create an issue on GitHub or contact us.
+## Logging
 
-Thank you for using ExpressBot! 😊
+The example uses `Warning` as its minimum level. Existing HTTP diagnostics can include
+authentication signatures, token responses, message payloads, and user data.
+Review the destination and access controls of your logs before enabling detailed
+logging. Some payload logging is at `Information`, so limiting only `Trace` is not sufficient
+to exclude all message contents. This release does not change that logging behavior
+from the current source implementation.
 
+## Relationship to ExpressBot.Core
+
+ExpressBot currently contains its own `ExpressBot.Core.*` types inside `ExpressBot.dll`.
+It does **not** depend on the separate
+[ExpressBot.Core NuGet package](https://www.nuget.org/packages/ExpressBot.Core).
+Those APIs have diverged. Installing both packages into one consumer can cause
+duplicate-type ambiguity; use ExpressBot on its own for its client and listener.
+
+## Upgrading from 0.1.0 to 0.2.0
+
+Rebuild consumers and review these source-breaking model changes:
+
+- `DirectNotifycation` is now `DirectNotification`.
+- `SendDirectNotificationAsync` returns `StatusResponce<SyncIdItem>` instead of
+  `StatusResponce`.
+- `BubbleOptions` is replaced by `ButtonOptions`; `Bubble` also exposes `Data`.
+- `CommandRequest.SyncId` is now `Guid` instead of `string`.
+- `CommandData.Data` and `CommandData.Metadata` are now `object`;
+  `Notification.Metadata` is `dynamic`. The former `CommandMetadata` and `Metadata`
+  classes have been removed.
+- `EditEvent.Payload` and `ReplyEvent.Reply` use `Notification`; the former `Payload`
+  class has been removed. `DirectNotification` and `EditEvent` derive from `BaseEvent`.
+
+The package now includes this README and links to its public source repository.
+
+## Build and contribute
+
+```sh
+dotnet build ExpressBot.sln -c Release
+```
+
+Report issues and propose changes in the
+[GitHub repository](https://github.com/vadarganiv/ExpressBot).
+The library is released under the MIT license.
